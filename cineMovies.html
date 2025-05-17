@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<!-- Open Movie Database API -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Netflix 2</title>
+  <style>
+    body {
+      background-color: #0f0f0f;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 {
+      color: #ff0000;
+    }
+    #searchInput {
+      padding: 0.5rem;
+      width: 300px;
+      font-size: 1rem;
+      border-radius: 4px;
+    }
+    #searchButton {
+      padding: 0.5rem 1rem;
+      background-color: #ff0000;
+      color: black;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #movieContainer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .movieCard {
+      background-color: #1c1c1c;
+      padding: 1rem;
+      border-radius: 8px;
+      width: 180px;
+      box-shadow: 0 0 8px rgb(255, 255, 255);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .movieCard:hover {
+      transform: scale(1.05);
+    }
+    .movieCard img {
+      width: 100%;
+      border-radius: 4px;
+    }
+    .movieCard h3 {
+      font-size: 1rem;
+      margin: 0.5rem 0 0;
+    }
+    .noResults {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+      color: #ff6666;
+    }
+  
+    #modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+    }
+    #modalContent {
+      background-color: #222;
+      border-radius: 8px;
+      max-width: 600px;
+      padding: 20px;
+      color: white;
+      text-align: left;
+      position: relative;
+    }
+    #modalContent img {
+      float: left;
+      margin-right: 20px;
+      width: 180px;
+      border-radius: 6px;
+    }
+    #modalContent h2 {
+      margin-top: 0;
+      color: #ff0000;
+    }
+    #modalContent p {
+      margin: 0.3rem 0;
+    }
+    #closeModal {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 25px;
+      font-weight: bold;
+      color: #ff0000;
+      cursor: pointer;
+    }
+    @media (max-width: 640px) {
+      #modalContent {
+        max-width: 90%;
+      }
+      #modalContent img {
+        float: none;
+        display: block;
+        margin: 0 auto 20px;
+        width: 100%;
+        max-width: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Netflix 2</h1>
+  <input type="text" id="searchInput" placeholder="Buscar película..." />
+  <button id="searchButton">Buscar</button>
+
+  <div id="movieContainer"></div>
+
+
+  <div id="modal">
+    <div id="modalContent">
+      <span id="closeModal">&times;</span>
+      <div id="movieDetails"></div>
+    </div>
+  </div>
+
+  <script>
+    const apiKey = "thewdb"; // Clave pública 
+
+    const movieContainer = document.getElementById("movieContainer");
+    const searchButton = document.getElementById("searchButton");
+    const searchInput = document.getElementById("searchInput");
+
+    const modal = document.getElementById("modal");
+    const closeModalBtn = document.getElementById("closeModal");
+    const movieDetailsDiv = document.getElementById("movieDetails");
+
+    // Mostrar películas
+    function displayMovies(movies) {
+      movieContainer.innerHTML = "";
+      if (!movies || movies.length === 0) {
+        movieContainer.innerHTML = `<div class="noResults">No se encontraron resultados para "<strong>${searchInput.value}</strong>".</div>`;
+        return;
+      }
+
+      movies.forEach((movie) => {
+        const card = document.createElement("div");
+        card.classList.add("movieCard");
+        card.innerHTML = `
+          <img src="${movie.Poster !== "N/A" ? movie.Poster : "https://via.placeholder.com/180x270?text=Sin+imagen"}" alt="${movie.Title}" />
+          <h3>${movie.Title} (${movie.Year})</h3>
+        `;
+        card.addEventListener("click", () => fetchMovieDetails(movie.imdbID));
+        movieContainer.appendChild(card);
+      });
+    }
+
+    // Buscar películas
+    function fetchMovies(query) {
+      fetch(`https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.Response === "True") {
+            displayMovies(data.Search);
+          } else {
+            displayMovies([]);
+          }
+        })
+        .catch(() => {
+          movieContainer.innerHTML = `<div class="noResults">Error al conectar con la API</div>`;
+        });
+    }
+
+    //  detalles de la película por imdbID
+    function fetchMovieDetails(id) {
+      fetch(`https://www.omdbapi.com/?apikey=${apiKey}&i=${id}&plot=full`)
+        .then(res => res.json())
+        .then(data => {
+          if(data.Response === "True") {
+            showModal(data);
+          } else {
+            alert("No se pudieron obtener detalles de la película.");
+          }
+        })
+        .catch(() => alert("Error al conectar con la API para detalles."));
+    }
+
+    // Mostrar
+    function showModal(movie) {
+      movieDetailsDiv.innerHTML = `
+        <img src="${movie.Poster !== "N/A" ? movie.Poster : "https://via.placeholder.com/180x270?text=Sin+imagen"}" alt="${movie.Title}" />
+        <h2>${movie.Title} (${movie.Year})</h2>
+        <p><strong>Género:</strong> ${movie.Genre}</p>
+        <p><strong>Director:</strong> ${movie.Director}</p>
+        <p><strong>Actores:</strong> ${movie.Actors}</p>
+        <p><strong>Duración:</strong> ${movie.Runtime}</p>
+        <p><strong>Calificación IMDb:</strong> ${movie.imdbRating}</p>
+        <p><strong>Sinopsis:</strong> ${movie.Plot}</p>
+      `;
+      modal.style.display = "flex";
+    }
+
+   
+    closeModalBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+
+   
+    window.addEventListener("click", (e) => {
+      if (e.target === modal) modal.style.display = "none";
+    });
+
+  
+    searchButton.addEventListener("click", () => {
+      const query = searchInput.value.trim();
+      if (query !== "") fetchMovies(query);
+    });
+
+    searchInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") searchButton.click();
+    });
+
+    // Mostrar catálogo 
+    window.addEventListener("DOMContentLoaded", () => {
+      fetchMovies("List");
+    });
+  </script>
+</body>
+</html>
